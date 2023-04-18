@@ -1,2 +1,4 @@
-# dnc
-Definitively Not a Cloud
+# Definitively Not a Cloud
+
+_wrapper scripts for DRBD/XEN resource management_
+
