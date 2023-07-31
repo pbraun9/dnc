@@ -64,7 +64,7 @@ check for available drbd minor from the drbd/lvm template range (<1024)
 
 create a new guest template e.g. with drbd minor 7 on mirror nodes 1 and 2
 
-        /root/new-resource-template.bash pmr1 pmr2 7 debian11jan2023
+        dnc-new-resource-template.bash pmr1 pmr2 7 debian11jan2023
 
 proceed with the [debian bootstrap guide](https://pub.nethence.com/xen/guest-debian) against that new DRBD volume
 
@@ -80,9 +80,9 @@ check for available drbd minor from the drbd/lvm guest snapshot range (>=1024)
 
 create a new snapshot-based drbd volume based on lvm template
 
-        /root/xen/new-resource.bash debian11jan2023 1024
+        dnc-new-resource.bash debian11jan2023 1024
 
 and finally post-tune the guest with the appropriate network settings
 
-        /root/xen/newguest-debian.bash 1024
+        dnc-newguest-debian.bash 1024
 

@@ -2,13 +2,9 @@
 set -e
 
 # no need for $tpl here since we already defined that while cloning the origin snapshot
-[[ -z $1 ]] && echo usage: "${0##*/} <drbd minor> [guest hostname]" && exit 1
-minor=$1
-[[ -n $2 ]] && guest=$2 || guest=dnc$minor
-
-guestid=$minor
-name=$guest
-short=${name%%\.*}
+[[ -z $2 ]] && echo ${0##*/} guestid guest && exit 1
+guestid=$1
+guest=$2
 
 source /etc/dnc.conf
 source /usr/local/lib/dnclib.bash
@@ -32,8 +28,16 @@ echo
 
 mkdir -p /data/guests/$guest/lala/
 
-echo -n mounting btrfs-lzo ...
-mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ && echo done || exit 1
+#echo -n mounting reiser4 wa ...
+#mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
+#        && echo done || bomb failed to mount reiser4 for $guest
+
+# whatever works
+mount /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
+	&& echo done || bomb failed to mount $guest
+
+#echo -n mounting btrfs-lzo ...
+#mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ && echo done || exit 1
 
 #echo -n mounting f2fs-lz4 ...
 #mount -o rw,noatime,nodiratime,compress_algorithm=lz4,compress_chksum,atgc,gc_merge \
@@ -42,14 +46,14 @@ mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ && ech
 # TODO use absolute path instead
 cd /data/guests/$guest/
 
-echo -n hostname $short ...
-echo $short > lala/etc/HOSTNAME && echo done
+echo -n hostname $guest ...
+echo $guest > lala/etc/HOSTNAME && echo done
 
 # ip got defined by dec2ip
 echo -n tuning /etc/hosts ...
 echo 127.0.0.1 localhost.localdomain localhost > lala/etc/hosts
 echo ::1 localhost.localdomain localhost >> lala/etc/hosts
-echo ${ip%/*} $short.localdomain $short >> lala/etc/hosts
+echo ${ip%/*} $guest.localdomain $guest >> lala/etc/hosts
 [[ -n $gw ]] && echo $gw gw.localdomain gw >> lala/etc/hosts && echo done
 
 # here sourcing var names, not vars themselves (requires BASH)
@@ -112,16 +116,24 @@ chmod 600 lala/root/.ssh/authorized_keys
 # override defaults from template
 #
 
-echo -n override template fstab ...
-cat > lala/etc/fstab <<EOF && echo done
-/dev/xvda1 / btrfs defaults,noatime,nodiratime,space_cache=v2,compress=lzo,discard 0 0
-devpts /dev/pts devpts gid=5,mode=620 0 0
-tmpfs /dev/shm tmpfs defaults 0 0
-proc /proc proc defaults 0 0
-EOF
-# for f2fs
-# boot system with additiona kernel argument rootflags=atgc
+# commented out - what ever is into tpl
+#echo -n override template fstab ...
+#cat > lala/etc/fstab <<EOF && echo done
+#/dev/xvda1 / reiser4 async,noatime,nodiratime,txmod=wa,discard 0 1
+#devpts /dev/pts devpts gid=5,mode=620 0 0
+#tmpfs /dev/shm tmpfs defaults 0 0
+#proc /proc proc defaults 0 0
+#EOF
+
+# butterfs
+#/dev/xvda1 / btrfs defaults,noatime,nodiratime,space_cache=v2,compress=lzo,discard 0 0
+#/dev/xvda1 / btrfs rw,      noatime,nodiratime,space_cache=v2,compress=lzo,discard 0 0
+#			  rw,noatime,nodiratime,space_cache=v2,compress=lzo,discard
+
+
+# f2fs
 #/dev/xvda1 / f2fs defaults,noatime,nodiratime,compress_algorithm=lz4,compress_extension=*,compress_chksum,atgc,gc_merge 1 1
+# and boot system with additional kernel argument rootflags=atgc
 
 # possible w/o tmem
 #echo disable boot-time kernel modules

@@ -15,7 +15,6 @@ guest=$4
 (( port = minor ))
 
 # size in GB (not GiB)
-#size=25G
 size=10G
 
 # initial checks

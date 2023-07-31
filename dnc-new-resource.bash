@@ -20,12 +20,17 @@ case $tpl in
 		node2=pmr2
 		butter=0
 		;;
-	slack*)
-		node1=pmr2
-		node2=pmr3
+	slack150)
+		node1=pmr1
+		node2=pmr2
 		butter=0
 		;;
 	netbsd*)
+		node1=pmr3
+		node2=pmr1
+		butter=0
+		;;
+	sabotage*)
 		node1=pmr3
 		node2=pmr1
 		butter=0
