@@ -1,8 +1,12 @@
 #!/bin/bash
 set -e
 
+# 1. brutal network setup
+# 2. ssh pub keys
+# 3. xen guest skeleton
+
 # no need for $tpl here since we already defined that while cloning the origin snapshot
-[[ -z $2 ]] && echo ${0##*/} guestid guest && exit 1
+[[ -z $2 ]] && echo ${0##*/} guest-id guest-name && exit 1
 guestid=$1
 guest=$2
 
@@ -28,20 +32,9 @@ echo
 
 mkdir -p /data/guests/$guest/lala/
 
-#echo -n mounting reiser4 wa ...
-#mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
-#        && echo done || bomb failed to mount reiser4 for $guest
-
-# whatever works
-mount /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
-	&& echo done || bomb failed to mount $guest
-
-#echo -n mounting btrfs-lzo ...
-#mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ && echo done || exit 1
-
-#echo -n mounting f2fs-lz4 ...
-#mount -o rw,noatime,nodiratime,compress_algorithm=lz4,compress_chksum,atgc,gc_merge \
-#	/dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ && echo done || exit 1
+echo -n mounting reiser4 wa ...
+mount -o defaults,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
+        && echo done || bomb failed to mount reiser4 for $guest
 
 # TODO use absolute path instead
 cd /data/guests/$guest/
@@ -49,25 +42,17 @@ cd /data/guests/$guest/
 echo -n hostname $guest ...
 echo $guest > lala/etc/HOSTNAME && echo done
 
-# ip got defined by dec2ip
+[[ -f lala/etc/hosts ]] && mv -i lala/etc/hosts lala/etc/hosts.dist
 echo -n tuning /etc/hosts ...
-echo 127.0.0.1 localhost.localdomain localhost > lala/etc/hosts
-echo ::1 localhost.localdomain localhost >> lala/etc/hosts
-echo ${ip%/*} $guest.localdomain $guest >> lala/etc/hosts
-[[ -n $gw ]] && echo $gw gw.localdomain gw >> lala/etc/hosts && echo done
-
-# here sourcing var names, not vars themselves (requires BASH)
-echo adding dns entries to /etc/hosts
-for dns in dns1 dns2 dns3 dns4; do
-	[[ -n ${!dns} ]] && echo ${!dns} $dns >> lala/etc/hosts
-done; unset dns
-
-# here sourcing the vars themselves
-echo -n erasing previous /etc/resolv.conf from template...
-rm -f lala/etc/resolv.conf
-for dns in $dns1 $dns2 $dns3 $dns4; do
-	echo nameserver $dns >> lala/etc/resolv.conf
-done && echo done; unset dns
+cat > lala/etc/hosts <<EOF && echo done
+127.0.0.1       localhost.localdomain localhost
+::1		localhost.localdomain localhost
+$ip     $guest.localdomain $guest
+${ip%\.*}.254  gw
+${ip%\.*}.253  dns1
+${ip%\.*}.252  dns2
+${ip%\.*}.251  dns3
+EOF
 
 # WARNING ESCAPES ARE IN THERE
 echo -n rc.inet1 ...
@@ -100,8 +85,7 @@ chmod +x lala/etc/rc.d/rc.inet1
 # in case template had host keys within
 echo clean-up ssh host keys
 rm -f lala/etc/ssh/ssh_host_*
-
-# NO NEED ON SLACKWARE - ALL HOST KEYS GET GENERATED ANYHOW
+# NO NEED TO GENERATE NEW PAIRS ON SLACKWARE - ALL HOST KEYS GET GENERATED ANYHOW
 
 echo -n adding pubkeys...
 mkdir -p lala/root/.ssh/
@@ -111,37 +95,6 @@ $pubkeys
 EOF
 chmod 700 lala/root/.ssh/
 chmod 600 lala/root/.ssh/authorized_keys
-
-#
-# override defaults from template
-#
-
-# commented out - what ever is into tpl
-#echo -n override template fstab ...
-#cat > lala/etc/fstab <<EOF && echo done
-#/dev/xvda1 / reiser4 async,noatime,nodiratime,txmod=wa,discard 0 1
-#devpts /dev/pts devpts gid=5,mode=620 0 0
-#tmpfs /dev/shm tmpfs defaults 0 0
-#proc /proc proc defaults 0 0
-#EOF
-
-# butterfs
-#/dev/xvda1 / btrfs defaults,noatime,nodiratime,space_cache=v2,compress=lzo,discard 0 0
-#/dev/xvda1 / btrfs rw,      noatime,nodiratime,space_cache=v2,compress=lzo,discard 0 0
-#			  rw,noatime,nodiratime,space_cache=v2,compress=lzo,discard
-
-
-# f2fs
-#/dev/xvda1 / f2fs defaults,noatime,nodiratime,compress_algorithm=lz4,compress_extension=*,compress_chksum,atgc,gc_merge 1 1
-# and boot system with additional kernel argument rootflags=atgc
-
-# possible w/o tmem
-#echo disable boot-time kernel modules
-#chmod -x lala/etc/rc.d/rc.modules
-#chmod -x lala/etc/rc.d/rc.modules.local
-
-echo reduce buffer/cache usage
-echo vm.vfs_cache_pressure = 200 > lala/etc/sysctl.d/reduce-buffer-cache.conf
 
 echo -n un-mounting...
 umount /data/guests/$guest/lala/ && echo done
@@ -153,20 +106,14 @@ kernel = "/data/kernels/5.2.21.domureiser4.vmlinuz"
 root = "/dev/xvda1 ro console=hvc0 mitigations=off"
 #extra = "init=/bin/bash"
 name = "$guest"
-vcpus = 2
-memory = 1024
+vcpus = 3
+memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda1,w']
 vif = [ 'bridge=guestbr0, vifname=$guest' ]
 type = "pvh"
 EOF
-#root = "/dev/xvda1 ro console=hvc0 mitigations=off rootflags=atgc"
-#memory = 512
-#maxmem = 7168
 
-#echo starting guest $guest
-#xl create /data/guests/$guest/$guest && echo -e \\nGUEST $guest HAS BEEN STARTED
-#echo up > /data/guests/$guest/state
-#echo
+echo
 
 dnc-startguest-lowram.bash $guest
 

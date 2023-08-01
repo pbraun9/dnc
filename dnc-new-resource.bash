@@ -14,37 +14,21 @@ guest=$3
 
 device=/dev/drbd$minor
 
-case $tpl in
-	debian*)
-		node1=pmr1
-		node2=pmr2
-		butter=0
-		;;
-	slack150)
-		node1=pmr1
-		node2=pmr2
-		butter=0
-		;;
-	netbsd*)
-		node1=pmr3
-		node2=pmr1
-		butter=0
-		;;
-	sabotage*)
-		node1=pmr3
-		node2=pmr1
-		butter=0
-		;;
-	*)
-		bomb on which nodes to find snapshot origin for template $tpl?
-		;;
-esac
+[[ ! -x `which dsh` ]] && bomb need dsh
 
-	#jammy)
-	#	node1=pmr3
-	#	node2=pmr1
-	#	butter=0
-	#	;;
+targetnodes=`dsh -e -g xen lvs | grep $tpl | cut -f1 -d:`
+
+(( `echo "$targetnodes" | wc -l` < 2 )) && bomb need at least two nodes -- got $targetnodes
+(( `echo "$targetnodes" | wc -l` > 2 )) && bomb more than two nodes? -- got $targetnodes
+
+node1=`echo "$targetnodes" | sed -n 1p`
+node2=`echo "$targetnodes" | sed -n 2p`
+
+echo node1 is $node1
+echo node2 is $node2
+
+[[ -z $node1 ]] && bomb could not determine where lives node1 snapshot origin for template $tpl
+[[ -z $node2 ]] && bomb could not determine where lives node2 snapshot origin for template $tpl
 
 # assuming decent guest id
 # 0: guest configs on shared disk file-system
