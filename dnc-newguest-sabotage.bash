@@ -1,7 +1,7 @@
 #!/bin/bash
 set -e
 
-[[ -z $2 ]] && echo ${0##*/} guestid guest && exit 1
+[[ -z $2 ]] && echo ${0##*/} guest-id guest-name && exit 1
 guestid=$1
 guest=$2
 
@@ -31,7 +31,6 @@ echo -n tuning /etc/hosts ...
 cat > lala/etc/hosts <<EOF && echo done
 127.0.0.1       localhost.localdomain   localhost
 ::1             localhost.localdomain   localhost
-
 ${ip%/*}	$guest
 EOF
 
@@ -91,10 +90,11 @@ kernel = "/data/kernels/5.2.21.domureiser4.vmlinuz"
 root = "/dev/xvda1 ro console=hvc0 mitigations=off"
 #extra = "init=/bin/mksh"
 name = "$guest"
-vcpus = 2
-memory = 1024
+vcpus = 3
+memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=$guest' ]
+vif = [ 'bridge=guestbr0, vifname=dnc$guestid.0',
+	'bridge=guestbr0, vifname=dnc$guestid.1' ]
 type = "pvh"
 EOF
 

@@ -146,10 +146,11 @@ kernel = "/data/kernels/5.2.21.domureiser4.vmlinuz"
 root = "/dev/xvda1 ro console=hvc0 net.ifnames=0 biosdevname=0 mitigations=off"
 #extra = "init=/bin/bash"
 name = "$guest"
-memory = 1024
-vcpus = 2
+vcpus = 3
+memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=$guest' ]
+vif = [ 'bridge=guestbr0, vifname=dnc$guestid.0',
+	'bridge=guestbr0, vifname=dnc$guestid.1' ]
 type = "pvh"
 EOF
 # netcfg/do_not_use_netplan=true

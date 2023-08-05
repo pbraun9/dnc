@@ -20,3 +20,6 @@ EOF
 done
 unset guestid
 
+# don't forget to change 22 dnat to point to the nobudget guest on the cluster network instead
+# (to avoid any spoofing attempts on the user network)
+

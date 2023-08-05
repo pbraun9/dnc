@@ -16,7 +16,7 @@ device=/dev/drbd$minor
 
 [[ ! -x `which dsh` ]] && bomb need dsh
 
-targetnodes=`dsh -e -g xen lvs | grep $tpl | cut -f1 -d:`
+targetnodes=`dsh -e -g xen "lvs | sed 1d" | awk '{print $1,$2}' | grep $tpl | cut -f1 -d:`
 
 (( `echo "$targetnodes" | wc -l` < 2 )) && bomb need at least two nodes -- got $targetnodes
 (( `echo "$targetnodes" | wc -l` > 2 )) && bomb more than two nodes? -- got $targetnodes

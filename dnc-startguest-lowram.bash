@@ -14,7 +14,7 @@ function is_maintenance {
 
 	Cluster state not optimal - node $node is under maintenance
 
-	Please try again in 15 minutes
+	<support@angrycow.ru>
 
 EOF
 	exit 1
@@ -35,7 +35,8 @@ alive=`dsh -e -g xen "xl list | grep -E \"^$guest[[:space:]]+\"" | cut -f1 -d:`
 
 # check cluster state is optimal
 for node in $nodes; do
-	ssh $node ls -1d /data/templates/ >/dev/null 2>&1 || is_maintenance
+	ssh $node ls -1d /data/guests/ >/dev/null 2>&1 || is_maintenance
+	ssh $node ls -1d /data/kernels/ >/dev/null 2>&1 || is_maintenance
 done; unset node
 
 guestpath=/data/guests/$guest

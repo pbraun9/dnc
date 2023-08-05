@@ -54,8 +54,11 @@ ${ip%\.*}.252  dns2
 ${ip%\.*}.251  dns3
 EOF
 
+echo -n brutal network setup...
+[[ -f lala/etc/rc.d/rc.inet1 ]] && \
+	mv -i lala/etc/rc.d/rc.inet1 lala/etc/rc.d/rc.inet1.dist && \
+	chmod -x lala/etc/rc.d/rc.inet1.dist
 # WARNING ESCAPES ARE IN THERE
-echo -n rc.inet1 ...
 cat > lala/etc/rc.d/rc.inet1 <<EOF && echo done
 #!/bin/bash
 
@@ -109,7 +112,8 @@ name = "$guest"
 vcpus = 3
 memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=$guest' ]
+vif = [ 'bridge=guestbr0, vifname=dnc$guestid.0',
+        'bridge=guestbr0, vifname=dnc$guestid.1' ]
 type = "pvh"
 EOF
 

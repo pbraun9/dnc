@@ -112,8 +112,8 @@ kernel = "$kernel"
 root = "xbd0a"
 #extra = "-v -s"
 name = "$guest"
-memory = 1024
-vcpus = 2
+vcpus = 3
+memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda,w']
 vif = [ 'bridge=guestbr0,vifname=$guest.0',
         'bridge=guestbr0,vifname=$guest.1']
