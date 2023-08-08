@@ -8,13 +8,9 @@ set -e
 kernel=/data/kernels/netbsd-current/netbsd-XEN3_DOMU.gz
 
 # no need for $tpl here since we already defined that while cloning the origin snapshot
-[[ -z $1 ]] && echo usage: "${0##*/} <drbd minor> [guest hostname]" && exit 1
-minor=$1
-[[ -n $2 ]] && guest=$2 || guest=dnc$minor
-
-guestid=$minor
-name=$guest
-short=${name%%\.*}
+[[ -z $1 ]] && echo usage: "${0##*/} <guest-id> [guest-hostname]" && exit 1
+guestid=$1
+[[ -n $2 ]] && guest=$2 || guest=dnc$guestid
 
 source /etc/dnc.conf
 source /usr/local/lib/dnclib.bash
@@ -31,7 +27,7 @@ dec2ip
 [[ -z $gw ]] && bomb missing \$gw
 
 echo
-echo SYSPREP FOR HOSTNAME $name
+echo SYSPREP FOR HOSTNAME $guest
 echo
 
 echo -n mounting $guest FFS read-write into /data/guests/$guest/lala/ ...
@@ -42,17 +38,17 @@ mount -t ufs -o rw,ufstype=44bsd /dev/drbd/by-res/$guest/0 lala/ && echo done
 mount | grep ufs
 echo
 
-echo -n hostname $name ...
-echo $short > lala/etc/myname && echo done
+echo -n hostname $guest ...
+echo $guest > lala/etc/myname && echo done
 
-# we're lucky the dnc.conf evaluation works on $ip even though it was loaded before $minor got defined
+# we're lucky the dnc.conf evaluation works on $ip even though it was loaded before $guestid got defined
 echo -n static name resolution...
 [[ ! -f lala/etc/hosts.dist ]] && mv lala/etc/hosts lala/etc/hosts.dist
 cat > lala/etc/hosts <<EOF && echo done
 ::1                     localhost localhost.
 127.0.0.1               localhost localhost.
 
-$ip		$short
+$ip		$guest
 $gw		gw
 $dns1		dns1
 $dns2		dns2
@@ -115,8 +111,8 @@ name = "$guest"
 vcpus = 3
 memory = 7168
 disk = ['phy:/dev/drbd/by-res/$guest/0,xvda,w']
-vif = [ 'bridge=guestbr0,vifname=$guest.0',
-        'bridge=guestbr0,vifname=$guest.1']
+vif = [ 'bridge=guestbr0,vifname=dnc$guestid.0',
+        'bridge=guestbr0,vifname=dnc$guestid.1']
 #type = "pvh"
 EOF
 echo
