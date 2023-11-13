@@ -8,8 +8,9 @@ install:
 	install -d $(DESTDIR)$(PREFIX)/lib/
 
 	install -m 755 dnc-consoleguest.bash $(DESTDIR)$(PREFIX)/sbin/
+	install -m 755 dnc-cron-ha.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-destroy-guest.bash $(DESTDIR)$(PREFIX)/sbin/
-	install -m 755 dnc-list-minors.bash $(DESTDIR)$(PREFIX)/sbin/
+	install -m 755 dnc-list-slots.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-list-templates.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-new-resource-template.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-new-resource.bash $(DESTDIR)$(PREFIX)/sbin/

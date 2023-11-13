@@ -59,8 +59,7 @@ although some steps can eventually be overwritten during guest deployments for c
 
 check for available drbd minor from the drbd/lvm template range (<1024)
 
-        cd /etc/drbd.d/
-        grep minor *.res | sort -V -k3
+	dnc-list-slots.bash
 
 create a new guest template e.g. with drbd minor 7 on mirror nodes 1 and 2
 
@@ -73,16 +72,22 @@ proceed with the [debian bootstrap guide](https://pub.nethence.com/xen/guest-deb
 
 ### create a new guest (based on template)
 
-check for available drbd minor from the drbd/lvm guest snapshot range (>=1024)
+check for available drbd slots
 
-        cd /etc/drbd.d/
-        grep minor *.res | sort -V -k3
+	dnc-list-slots.bash
 
-create a new snapshot-based drbd volume based on lvm template
+note you might avoid the range used by nobudget (starts at 1024).
+for example let's say we want slot 23.
 
-        dnc-new-resource.bash debian11jan2023 1024
+what templates do we have?
+
+	dnc-list-templates.bash
+
+create a new snapshot-based drbd volume based on lvm template (here debian12)
+
+        dnc-new-resource.bash debian12 23 <OPTIONAL RESOURCE NAME>
 
 and finally post-tune the guest with the appropriate network settings
 
-        dnc-newguest-debian.bash 1024
+        dnc-newguest-debian.bash 23 <OPTIONAL HOSTNAME>
 

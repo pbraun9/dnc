@@ -30,12 +30,13 @@ echo
 
 mkdir -p /data/guests/$guest/lala/
 
-echo -n mounting reiser4 wa...
-mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
-	&& echo done || bomb failed to mount reiser4 for $guest
+#echo -n mounting reiser4 wa...
+#mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
+#	&& echo done || bomb failed to mount reiser4 for $guest
 
-#echo -n mounting butterfs lzo...
-#mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/
+# not sure why that command doesn't return 0 although it succeeds
+echo mounting butterfs lzo
+mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/
 # (already resized)
 
 # TODO use absolute path instead
@@ -72,11 +73,8 @@ cat > lala/etc/hosts <<EOF && echo done
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 
-${ip%/*} $short
-$gw gw
-$dns1 dns1
-$dns2 dns2
-$dns3 dns3
+127.0.0.1	$short
+
 EOF
 #$dns0 dns0
 
@@ -91,6 +89,7 @@ cat > lala/etc/resolv.conf <<EOF && echo done
 nameserver 10.1.255.253
 nameserver 10.1.255.252
 nameserver 10.1.255.251
+
 EOF
 #nameserver 10.1.255.254
 
