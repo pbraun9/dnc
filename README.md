@@ -91,3 +91,12 @@ and finally post-tune the guest with the appropriate network settings
 
         dnc-newguest-debian.bash 23 <OPTIONAL HOSTNAME>
 
+<!--
+## Distributed HA
+
+here's a lame attempt for a HA scheduler
+-- enable on every node
+
+	*/5 * * * /usr/local/sbin/dnc-cron-ha.bash 2>&1
+-->
+
