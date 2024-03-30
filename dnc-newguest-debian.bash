@@ -16,6 +16,8 @@ source /usr/local/lib/dnclib.bash
 # check drbd/lvm resource status
 source /usr/local/lib/dnclib-checks.bash
 
+[[ ! -x `which btrfs` ]] && bomb missing btrfs command
+
 # gw and friends got sourced by dnc.conf
 # but guest ip gets eveluated by dec2ip function
 dec2ip
@@ -23,23 +25,29 @@ dec2ip
 [[ -z $ip ]] && bomb missing \$ip
 [[ -z $gw ]] && bomb missing \$gw
 
-echo DEBIAN SYSTEM PREPARATION
+echo
+echo \ DEBIAN SYSTEM PREPARATION
 echo
 
 # note drbd resource is possibly diskless
 
 mkdir -p /data/guests/$guest/lala/
 
-#echo -n mounting reiser4 wa...
-#mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
-#	&& echo done || bomb failed to mount reiser4 for $guest
+# we only have two kinds of templates BTRFS and REISER4
+btrfs ckeck --readonly /dev/drbd/by-res/$guest/0 >/dev/null 2>&1 && fs=btrfs || fs=reiser4
 
-# not sure why that command doesn't return 0 although it succeeds
-echo mounting butterfs lzo
-mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/
-# (already resized)
+if [[ $fs = btrfs ]]; then
+	# not sure why that command doesn't return 0 although it succeeds
+	echo mounting butterfs lzo
+	mount -o compress=lzo /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/
+	# (already resized)
+else
+	echo -n mounting reiser4 wa ...
+	mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
+		&& echo done || bomb failed to mount reiser4 for $guest
+fi
 
-# TODO use absolute path instead
+# TODO use absolute path all script long instead of entering the folder
 cd /data/guests/$guest/
 
 #echo -n erasing previous /etc/fstab from template...
