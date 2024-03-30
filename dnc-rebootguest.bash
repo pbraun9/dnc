@@ -6,7 +6,7 @@ source /usr/local/lib/dnclib.bash
 guest=$1
 
 # we are root already
-node=`dnc-running-guest.bash $guest | cut -f1 -d:`
+node=`running-guest $guest | cut -f1 -d:`
 [[ -z $node ]] && bomb could not determine on what node guest $guest lives on
 (( debug > 0 )) && echo guest $guest lives on $node
 

@@ -20,7 +20,6 @@ install:
 	install -m 755 dnc-newguest-slack.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-rebootguest.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-remove-resource.bash $(DESTDIR)$(PREFIX)/sbin/
-	install -m 755 dnc-running-guest.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-running-guests.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-running-vrrp.bash $(DESTDIR)$(PREFIX)/sbin/
 	install -m 755 dnc-shutdown-guest.bash $(DESTDIR)$(PREFIX)/sbin/

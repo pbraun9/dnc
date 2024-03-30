@@ -1,4 +1,11 @@
 
+function running-guest {
+	# $1 = $guest
+
+	export CLUSTER=/etc/dsh.conf
+	dsh -e -g xen "xl list $1 2>/dev/null | sed 1d"
+}
+
 function usage {
 	echo
 	echo " usage: ${0##*/} $@"

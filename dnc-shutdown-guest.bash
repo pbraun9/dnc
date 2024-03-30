@@ -15,7 +15,7 @@ guestpath=/data/guests/$guest
 #(( `echo "$node" | wc -l` > 1 )) && echo -e "ERROR guest lives on multiple nodes!\n$node" && exit 1
 
 # we are root already
-node=`/usr/local/sbin/dnc-running-guest.bash $guest | cut -f1 -d:`
+node=`running-guest $guest | cut -f1 -d:`
 [[ -z $node ]] && bomb could not determine on what node guest $guest lives on
 (( debug > 0 )) && echo guest $guest lives on $node
 

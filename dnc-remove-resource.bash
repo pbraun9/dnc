@@ -21,7 +21,7 @@ fi
 #dnc-shutdown-guest.bash $guest
 
 # we are root already
-tmp=`/usr/local/sbin/dnc-running-guest.bash $guest | cut -f1 -d:`
+tmp=`running-guest $guest | cut -f1 -d:`
 [[ ! -z $tmp ]] && bomb guest $guest is alive on node $tmp - shut it down first
 
 echo -n clean-up guest config...

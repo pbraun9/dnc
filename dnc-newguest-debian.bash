@@ -92,13 +92,13 @@ EOF
 #for dns in $dns1 $dns2 $dns3 $dns4; do
 #        echo nameserver $dns >> lala/etc/resolv.conf
 #done && echo done; unset dns
-echo -n writing resolv.conf ...
-cat > lala/etc/resolv.conf <<EOF && echo done
-nameserver 10.1.255.253
-nameserver 10.1.255.252
-nameserver 10.1.255.251
 
-EOF
+#echo -n writing resolv.conf ...
+#cat > lala/etc/resolv.conf <<EOF && echo done
+#nameserver 10.1.255.253
+#nameserver 10.1.255.252
+#nameserver 10.1.255.251
+#EOF
 #nameserver 10.1.255.254
 
 echo -n network/interfaces ...
