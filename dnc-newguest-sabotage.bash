@@ -1,14 +1,25 @@
 #!/bin/bash
 set -e
 
-[[ -z $2 ]] && echo ${0##*/} guest-id guest-name && exit 1
-guestid=$1
-guest=$2
+[[ -z $1 ]] && echo usage: "${0##*/} <drbd minor> [guest hostname]" && exit 1
+slot=$1
+[[ -n $2 ]] && guest=$2 || guest=dnc$slot
+
+short=${guest%%\.*}
 
 source /etc/dnc.conf
 source /usr/local/lib/dnclib.bash
 source /usr/local/lib/dnclib-checks.bash
-dec2ip
+
+[[ -z $slot ]] && bomb missing \$slot
+[[ -z $guest ]] && bomb missing \$guest
+[[ -z $res ]] && bomb missing \$res
+
+alive=`dsh -e -g xen "xl list | grep -E \"^$guest[[:space:]]+\"" | cut -f1 -d:`
+[[ -n $alive ]] && echo $guest already lives on $alive && exit 1
+
+dec2ip $slot
+
 [[ -z $ip ]] && bomb missing \$ip
 [[ -z $gw ]] && bomb missing \$gw
 
@@ -18,29 +29,49 @@ echo
 
 mkdir -p /data/guests/$guest/lala/
 
-echo -n mounting reiser4 wa ...
-mount -o async,noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$guest/0 /data/guests/$guest/lala/ \
-        && echo done || bomb failed to mount reiser4 for $guest
+function mount_reiser4 {
+	echo -n mounting reiser4 ...
+	mount -t reiser4 -o noatime,nodiratime,txmod=wa,discard /dev/drbd/by-res/$res/0 /data/guests/$guest/lala/ \
+		&& echo done || bomb failed to mount reiser4 for $guest
+	# async
+}
+
+function mount_ext4 {
+        echo -n mounting ext4 ...
+        mount -t ext4 -o noatime,nodiratime /dev/drbd/by-res/$res/0 /data/guests/$guest/lala/ \
+                && echo done || bomb failed to mount ext4 for $guest
+	# async
+
+}
+
+echo checking file-system type ext4 vs. reiser4
+tune2fs -l /dev/drbd/by-res/$res/0 >/dev/null 2>&1
+
+[[ $? = 0 ]] && mount_ext4
+[[ $? = 1 ]] && mount_reiser4
 
 cd /data/guests/$guest/
 
-echo -n hostname $guest...
-echo $guest > lala/etc/hostname && echo done
+echo -n hostname $short ...
+echo $short > lala/etc/hostname && echo done
 
 echo -n tuning /etc/hosts ...
 cat > lala/etc/hosts <<EOF && echo done
 127.0.0.1       localhost.localdomain   localhost
 ::1             localhost.localdomain   localhost
-${ip%/*}	$guest
+
+${ip%/*}	$short
+
 EOF
 
 echo -n tuning /etc/resolv.conf ...
-rm -f lala/etc/resolv.conf
 cat > lala/etc/resolv.conf <<EOF && echo done
-nameserver 10.1.255.252
-nameserver 10.1.255.251
-nameserver 10.1.255.253
+nameserver 208.67.222.222
+nameserver 208.67.220.220
 EOF
+#nameserver 10.1.255.252
+#nameserver 10.1.255.251
+#nameserver 10.1.255.253
 
 echo -n tuning /etc/rc.local ...
 #mv lala/etc/rc.local lala/etc/rc.local.tmp
@@ -92,9 +123,9 @@ root = "/dev/xvda1 ro console=hvc0 mitigations=off"
 name = "$guest"
 vcpus = 3
 memory = 7168
-disk = ['phy:/dev/drbd/by-res/$guest/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=dnc$guestid.0',
-	'bridge=guestbr0, vifname=dnc$guestid.1' ]
+disk = ['phy:/dev/drbd/by-res/$res/0,xvda1,w']
+vif = [ 'bridge=guestbr0, vifname=$res.0',
+	'bridge=guestbr0, vifname=$res.1' ]
 type = "pvh"
 EOF
 

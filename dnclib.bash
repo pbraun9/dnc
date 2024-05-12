@@ -39,7 +39,9 @@ function bomb {
 # defines $ip
 function dec2ip {
 	[[ -z $prefix ]] && echo function dec2ip requires \$prefix from /etc/dnc.conf && exit 1
-	[[ -z $guestid ]] && echo function dec2ip requires \$guestid && exit 1
+
+	[[ -z $1 ]] && echo function dec2ip requires guestid as argument && exit 1
+	guestid=$1
 
 	# hex from dec
         tmp=`printf "%x" $guestid`

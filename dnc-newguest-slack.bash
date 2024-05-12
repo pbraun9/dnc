@@ -18,7 +18,7 @@ source /usr/local/lib/dnclib-checks.bash
 
 # gw and friends got sourced by dnc.conf
 # but guest ip gets eveluated by dec2ip function
-dec2ip
+dec2ip $guestid
 
 [[ -z $ip ]] && bomb missing \$ip
 [[ -z $gw ]] && bomb missing \$gw
