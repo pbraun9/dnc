@@ -24,7 +24,7 @@ dec2ip $slot
 [[ -z $gw ]] && bomb missing \$gw
 
 echo
-echo SABOTAGE SYSTEM PREPARATION
+echo \ SABOTAGE SYSTEM PREPARATION \($res\)
 echo
 
 mkdir -p /data/guests/$guest/lala/
@@ -45,10 +45,11 @@ function mount_ext4 {
 }
 
 echo checking file-system type ext4 vs. reiser4
-tune2fs -l /dev/drbd/by-res/$res/0 >/dev/null 2>&1
-
-[[ $? = 0 ]] && mount_ext4
-[[ $? = 1 ]] && mount_reiser4
+if tune2fs -l /dev/drbd/by-res/$res/0 >/dev/null 2>&1; then
+	mount_ext4
+else
+	mount_reiser4
+fi
 
 cd /data/guests/$guest/
 
@@ -85,9 +86,13 @@ sed "
 	" lala/etc/rc.local.dist > lala/etc/rc.local && echo done
 chmod +x lala/etc/rc.local
 
-echo clean-up ssh host keys
+echo clean-up openssh host keys
 rm -f lala/etc/ssh/ssh_host_*
-rm -f lala/etc/dropbear/*host_key*
+# no need to generate new pairs
+
+echo clean-up dropbear host keys
+#rm -f lala/etc/dropbear/*host_key*
+rm -f lala/etc/dropbear/dropbear_*_host_key*
 # no need to generate new pairs
 
 echo -n adding pubkeys...
@@ -103,13 +108,17 @@ chmod 600 lala/root/.ssh/authorized_keys
 # override defaults from template
 #
 
-echo -n override template fstab ...
-cat > lala/etc/fstab <<EOF && echo done
-/dev/xvda1 / reiser4 async,noatime,nodiratime,txmod=wa,discard 0 1
-devpts /dev/pts devpts gid=5,mode=620 0 0
-tmpfs /dev/shm tmpfs defaults 0 0
-proc /proc proc defaults 0 0
-EOF
+#echo -n override template fstab ...
+#cat > lala/etc/fstab <<EOF && echo done
+#/dev/xvda1 / reiser4 async,noatime,nodiratime,txmod=wa,discard 0 1
+#devpts /dev/pts devpts gid=5,mode=620 0 0
+#tmpfs /dev/shm tmpfs defaults 0 0
+#proc /proc proc defaults 0 0
+#EOF
+
+#
+# done tuning the guest image
+#
 
 echo -n un-mounting...
 umount /data/guests/$guest/lala/ && echo done
@@ -121,11 +130,11 @@ kernel = "/data/kernels/5.2.21.domureiser4.vmlinuz"
 root = "/dev/xvda1 ro console=hvc0 mitigations=off"
 #extra = "init=/bin/mksh"
 name = "$guest"
-vcpus = 3
-memory = 7168
+vcpus = 1
+memory = 1024
 disk = ['phy:/dev/drbd/by-res/$res/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=$res.0',
-	'bridge=guestbr0, vifname=$res.1' ]
+vif = [ 'bridge=guestbr0, vifname=dnc$slot.0',
+	'bridge=guestbr0, vifname=dnc$slot.1' ]
 type = "pvh"
 EOF
 

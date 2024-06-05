@@ -52,19 +52,19 @@ function mount_reiser4 {
 }
 
 function mount_btrfs {
-	[[ ! -x `which btrfs` ]] && bomb missing btrfs command
-
 	# not sure why that command doesn't return 0 although it succeeds
-	echo mounting butter fs ...
+	echo mounting butter-fs ...
 	mount -t btrfs -o compress=lzo /dev/drbd/by-res/$res/0 /data/guests/$guest/lala/
 	# (already resized)
 }
 
-echo checking file-system type butter fs vs. reiser4
-btrfs filesystem show /dev/drbd/by-res/$res/0 >/dev/null 2>&1
-
-[[ $? = 0 ]] && mount_btrfs
-[[ $? = 1 ]] && mount_reiser4
+#[[ ! -x `which btrfs` ]] && bomb missing btrfs command
+echo checking file-system type butter-fs vs. reiser4
+if btrfs filesystem show /dev/drbd/by-res/$res/0 >/dev/null 2>&1; then
+	mount_btrfs
+else
+	mount_reiser4
+fi
 
 # TODO use absolute path all script long instead of entering the folder
 cd /data/guests/$guest/
@@ -163,6 +163,10 @@ chmod 600 lala/root/.ssh/authorized_keys
 #deb http://security.debian.org/debian-security bullseye-security main contrib non-free
 #EOF
 
+#
+# done tuning the guest image
+#
+
 echo -n un-mounting...
 umount /data/guests/$guest/lala/ && echo done
 rmdir /data/guests/$guest/lala/
@@ -176,8 +180,8 @@ name = "$guest"
 vcpus = 3
 memory = 7168
 disk = ['phy:/dev/drbd/by-res/$res/0,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=$res.0',
-	'bridge=guestbr0, vifname=$res.1' ]
+vif = [ 'bridge=guestbr0, vifname=dnc$slot.0',
+	'bridge=guestbr0, vifname=dnc$slot.1' ]
 type = "pvh"
 EOF
 # netcfg/do_not_use_netplan=true
