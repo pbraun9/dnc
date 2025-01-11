@@ -19,7 +19,7 @@ node=`running-guest $guest | cut -f1 -d:`
 [[ -z $node ]] && bomb could not determine on what node guest $guest lives on
 (( debug > 0 )) && echo guest $guest lives on $node
 
-# outputs Shutting down domain 9 and Connection to pmr3 closed. hence w/o -n
+# outputs Shutting down domain 9 and Connection to node3 closed. hence w/o -n
 echo SHUTTING DOWN GUEST $guest ON NODE $node
 
 #echo gracefully shutting down guest $guest on node $node

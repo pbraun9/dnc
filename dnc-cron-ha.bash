@@ -11,7 +11,7 @@ PATH=/usr/local/bin:/usr/local/sbin:/bin:/sbin:/usr/bin:/usr/sbin
 [[ ! -x `which dnc-running-guests.bash` ]] && echo dnc-running-guests.bash executable not found && exit 1
 [[ ! -x `which xl` ]] && echo xl executable not found && exit 1
 
-node=`dsh -e -g pmr "xl info | grep ^free_memory" | sort -V -k3 -t: | tail -1 | cut -f1 -d:`
+node=`dsh -e -g xen "xl info | grep ^free_memory" | sort -V -k3 -t: | tail -1 | cut -f1 -d:`
 
 [[ ! $node = `hostname` ]] && exit 0
 

@@ -2,7 +2,7 @@
 function running-guest {
 	# $1 = $guest
 
-	export CLUSTER=/etc/dsh.conf
+	export CLUSTER=/root/cluster.conf
 	dsh -e -g xen "xl list $1 2>/dev/null | sed 1d"
 }
 

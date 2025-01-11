@@ -22,7 +22,7 @@ EOF
 
 #echo powering on guest $guest
 
-export CLUSTER=/root/dsh.conf
+export CLUSTER=/root/cluster.conf
 
 [[ -z $1 ]] && echo "${0##*/} <GUEST-NAME>" && exit 1
 guest=$1
@@ -44,7 +44,7 @@ conf=$guestpath/$guest
 [[ ! -f $conf ]] && echo $conf cannot be found && exit 1
 
 # available memory left hence we look for the greatest amount
-freeram=`dsh -e -g pmr "xl info | grep ^free_memory" | sort -V -k3 -t: | tail -1`
+freeram=`dsh -e -g xen "xl info | grep ^free_memory" | sort -V -k3 -t: | tail -1`
 free=`echo $freeram | awk '{print $NF}'`
 node=`echo $freeram | cut -f1 -d:`
 echo "node with least used RAM is $node ($free M free)"

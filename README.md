@@ -2,12 +2,30 @@
 
 _wrapper scripts for DRBD/XEN resource management_
 
-_tested on slack150_
+_tested on slackware 15.0_
 
 ## Requirements
 
-- a convergent [DRBD](https://pub.nethence.com/storage/drbd)/[XEN](/xen/slackware) farm <!--with LVM2 thin provisioning-->
-- [ClusterIt](https://www.garbled.net/clusterit)
+### drbd & shared-disk for xen configs
+
+setup a convergent [DRBD](https://pub.nethence.com/storage/drbd)/[XEN](/xen/slackware) farm
+with [LVM2 thin provisioning](https://pub.nethence.com/storage/lvm2) and some shared-disk [file](https://pub.nethence.com/storage/gfs2)-[system](https://pub.nethence.com/storage/ocfs2)
+
+	drbdadm status ocfs2
+	ls -lhF /data/
+
+### cluster.conf
+
+install [ClusterIt](https://www.garbled.net/clusterit) and setup your cluster
+
+```
+vi /root/cluster.conf
+
+GROUP:xen
+node1
+node2
+...
+```
 
 ## Shared storage
 
