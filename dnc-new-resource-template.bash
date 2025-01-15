@@ -5,6 +5,8 @@ set -e
 
 source /etc/dnc.conf
 
+[[ -z $cluster_prefix ]] && echo error: define cluster_prefix in dnc.conf && exit 1
+
 node1=$1
 node2=$2
 minor=$3
@@ -52,7 +54,7 @@ for node in $nodes; do
 		cat >> /etc/drbd.d/$guest.res <<EOF
 	on $node {
 		node-id   $id;
-		address   10.3.3.$id:$port;
+		address   $cluster_prefix.$id:$port;
 		disk      /dev/thin/$guest;
 	}
 EOF
@@ -60,7 +62,7 @@ EOF
 		cat >> /etc/drbd.d/$guest.res <<EOF
 	on $node {
 		node-id   $id;
-		address   10.3.3.$id:$port;
+		address   $cluster_prefix.$id:$port;
 		disk      none;
 	}
 EOF
