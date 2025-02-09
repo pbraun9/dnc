@@ -1,0 +1,25 @@
+
+# ssh-reachable nodes names
+nodes="node1 node2 node3"
+
+# e.g. for nodes named node1 node2 node3... prefix is "node"
+hostprefix=node
+
+# define prefix for the storage cluster network
+cluster_prefix=10.3.3
+
+# define network parms for the guest network
+# network is 10.1.0.0/16
+# $ip gets evaluated within the scripts (function dec2ip)
+prefix=10.1
+gw=10.1.255.254
+
+# name servers
+# libvirt/kvm
+#dns1=192.168.122.1
+# unbound on fuck-martinez xen hosts
+dns1=10.1.255.254
+
+# pubkeys you want all the guests to have by default.  can be empty if not required
+pubkeys="ssh-ed25519 ... comment"
+

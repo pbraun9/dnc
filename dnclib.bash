@@ -43,7 +43,7 @@ function dec2ip {
 	[[ -z $1 ]] && echo function dec2ip requires guestid as argument && exit 1
 	guestid=$1
 
-	# hex from dec
+	# dec2hex
         tmp=`printf "%x" $guestid`
 
 	if (( `echo -n $tmp | wc -c` < 2 )); then
