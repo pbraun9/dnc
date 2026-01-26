@@ -90,16 +90,26 @@ and a guest network
 
 	slackpkg install make guile gc
 
+	cd /root/
 	git clone https://github.com/pbraun9/dnc
-	cd dnc/
-	make install
 
 ## setup
 
+	cd dnc/
 	cp dnc.conf.sample /etc/dnc.conf
 	vi /etc/dnc.conf
 
 ## usage
 
-see [USAGE.md](USAGE.md)
+see [README.usage.md](READMEusage.md) for cacual vdisks
+
+see [README.usage.template.md](README.usage.template.md) for rw-snapshot guests (experimental)
+
+## additional notes
+
+### naming
+
+let's consider drbd resource name `debian12_3` (underscores are allowed, we're not talking dns here).
+guest/instance folder sticks with that e.g. `/data_local/guests/debian12_3`.
+only the hostname within the guest can be different but that's not our business.
 

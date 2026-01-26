@@ -1,0 +1,5 @@
+#!/bin/bash
+
+cd /etc/drbd.d/
+grep -E 'minor|device' *.res | cut -f2- -d: | sort -V
+

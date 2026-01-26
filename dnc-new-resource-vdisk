@@ -1,0 +1,170 @@
+#!/bin/bash
+set -e
+
+# todo - can now override itself, however problem is it won't complain of duplicate resource names anymore
+
+[[ -z $4 ]] && echo "usage: ${0##*/} <node1> <node2> <drbd slot> <drbd resource name>" && exit 1
+
+source /etc/dnc.conf
+
+[[ -z $cluster_prefix ]]  && echo error: define cluster_prefix in dnc.conf && exit 1
+[[ -z $storage ]]         && echo error: define storage in dnc.conf && exit 1
+
+node1=$1
+node2=$2
+minor=$3
+guest=$4
+
+# tcp port goes as drbd minor for templates and full-blown guests
+# choose wisely (below 1024, not to interfere with guests)
+(( port = minor ))
+
+# size in gigabytes as usual when talking non-volatile (not gibibytes)
+size=25
+
+echo
+echo CREATE THIN VOLUME ON TWO NODES
+echo
+
+if [[ $storage = lvm2 ]]; then
+	echo create lvm2 volume on $node1
+	ssh $node1 lvcreate --virtualsize ${size}G --thin -n $guest thin/pool
+	ssh $node1 lvs -o+discards thin/$guest
+	echo
+
+	echo create lvm2 volume on $node2
+	ssh $node2 lvcreate --virtualsize ${size}G --thin -n $guest thin/pool
+	ssh $node2 lvs -o+discards thin/$guest
+	echo
+
+	disk=/dev/thin/$guest
+elif [[ $storage = zfs ]]; then
+	echo create zfs volume on $node1
+	if ssh $node1 ls -1 /dev/zvol/smith/$guest 1>/dev/null 2>&1; then
+		echo already
+	else
+		ssh $node1 zfs create -s -V ${size}GB smith/$guest
+		ssh $node1 ls -lF /dev/zvol/smith/$guest
+	fi
+
+	echo create zfs volume on $node2
+	if ssh $node2 ls -1 /dev/zvol/smith/$guest 1>/dev/null 2>&1; then
+		echo already
+	else
+		ssh $node2 zfs create -s -V ${size}GB smith/$guest
+		ssh $node2 ls -lF /dev/zvol/smith/$guest
+	fi
+
+	disk=/dev/zvol/smith/$guest
+fi
+
+echo
+echo DRBD CONFIG AND SYNC
+echo
+
+# sanitize vars to avoid EOF in there
+echo -n writing /etc/drbd.d/$guest.res ...
+
+if [[ -f /etc/drbd.d/$guest.res ]]; then
+	echo already
+else
+# ---
+
+cat > /etc/drbd.d/$guest.res <<EOF
+resource $guest {
+	device /dev/drbd$minor;
+	meta-disk internal;
+EOF
+
+for node in $nodes; do
+	id=`echo $node | sed -r "s/^$hostprefix//"`
+	if [[ $node = $node1 || $node = $node2 ]]; then
+		cat >> /etc/drbd.d/$guest.res <<EOF
+	on $node {
+		node-id   $id;
+		address   $cluster_prefix.$id:$port;
+		disk      $disk;
+	}
+EOF
+	else
+		cat >> /etc/drbd.d/$guest.res <<EOF
+	on $node {
+		node-id   $id;
+		address   $cluster_prefix.$id:$port;
+		disk      none;
+	}
+EOF
+	fi
+done; unset node
+
+cat >> /etc/drbd.d/$guest.res <<EOF && echo done
+	connection-mesh {
+		hosts $nodes;
+	}
+}
+EOF
+
+#---
+fi
+
+for node in $nodes; do
+	if [[ $node != `hostname` ]]; then
+		echo -n conf sync on $node ...
+		rsync -a --delete /etc/drbd.d/ $node:/etc/drbd.d/ && echo done
+	fi
+done; unset node
+
+echo
+echo INITIALIZE THE VOLUME
+echo
+
+# note status before create-md is inexistant:
+#	debian12: No such resource
+#	Command 'drbdsetup status debian12' terminated with exit code 10
+# note after create-md + up it's disk:Inconsistent open:no + peer-disk:Inconsistent
+
+# todo - this is not the right test, we should rather look for drbd headers or something
+# skip and proceed if headers are there already
+echo create-md on $node1
+if ssh $node1 drbdadm status $guest >/dev/null 2>&1; then
+	echo already
+else
+	ssh $node1 drbdadm create-md $guest || true
+fi
+echo
+
+echo create-md on $node2
+if ssh $node2 drbdadm status $guest >/dev/null 2>&1; then
+	echo already
+else
+	ssh $node2 drbdadm create-md $guest || true
+fi
+echo
+
+for node in $nodes; do
+	echo resource $guest up on $node
+	if ssh $node drbdadm status $guest >/dev/null 2>&1; then
+		echo already
+	else
+		ssh $node drbdadm up $guest
+	fi
+done; unset node
+echo
+
+# once and only once - that only happens first shot for resource initialization
+# once and only once - let's do that on node1
+echo drbd-fast-sync
+echo -n idling 3 seconds ...
+sleep 3 && echo done
+#if [[ -z `ssh $node1 drbdadm status $guest | grep 'disk:Inconsistent open:no'` ]]; then
+#disk:Consistent
+#disk:UpToDate
+if [[ -n `ssh $node1 drbdadm status $guest | grep 'disk:UpToDate'` ]]; then
+	echo already \(most probably\)
+else
+	ssh $node1 drbdadm new-current-uuid --clear-bitmap $guest
+fi
+echo
+
+drbdadm status $guest
+

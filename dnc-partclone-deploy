@@ -1,0 +1,23 @@
+#!/bin/bash
+set -e
+
+#
+# deploy a new guest based on partclone template
+#
+
+[[ -z $2 ]] && echo partclone template name and target slot? && exit 1
+tpl=$1
+slot=$2
+
+source /etc/dnc.conf
+
+[[ -z $data ]] && echo define data in dnc.conf && exit 1
+
+[[ ! -f $data/templates/debian12.pcl.gz ]] && echo could not find $data/templates/$tpl.pcl.gz && exit 1
+[[ ! -b /dev/drbd$slot ]] && echo could not find /dev/drbd$slot block device && exit 1
+
+#time partclone.ext4 -r -s $data/templates/debian12.pcl -o /dev/drbd$slot
+time zcat $data/templates/$tpl.pcl.gz | partclone.ext4 -r -o /dev/drbd$slot
+
+# 0m53.520s vs 0m49.094s (faster with gz!)
+

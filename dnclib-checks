@@ -1,0 +1,49 @@
+
+[[ ! -d /etc/drbd.d/ ]] && bomb /etc/drbd.d/ not found
+
+[[ ! -n $short ]] && short=${guest%%\.*}
+
+# assuming fully distributed farm (all nodes can see every resource w/ diskless)
+# not sure the resource has been named specifically, as it may have been created indepedently
+#if [[ -b /dev/drbd/by-res/$short/0 ]]; then
+#if [[ -b /dev/drbd$slot ]]; then
+#        res=$short
+#elif [[ -b /dev/drbd/by-res/dnc$slot/0 ]]; then
+#elif [[ -b /dev/drbd$slot ]]; then
+
+# always use standardized resource name
+#if [[ -b /dev/drbd$slot ]]; then
+#	res=dnc$slot
+#else
+#        bomb could not find drbd resource block device for $short
+#fi
+
+# handle all kinds of resource names (no standardization at all)
+res=`grep -E "(minor |device /dev/drbd)$slot;" /etc/drbd.d/* | cut -f1 -d:`
+
+(( `echo "$res" | wc -l` < 0 )) && bomb found no resource at all for slot $slot
+(( `echo "$res" | wc -l` > 1 )) && bomb found too many resources for slot $slot: && echo "$res"
+
+# strip the path
+res=${res##*/}
+
+# strip the extension
+res=${res%\.res}
+
+echo drbd resource name is $res
+
+drbdadm status $res >/dev/null || bomb could not grab status of drbd resource $res for slot $slot
+
+# /data/ is a shared across the farm
+# todo - reenable that check while allowing boostrap of infra guests on local storage like newbudget*
+#[[ -z `mount | grep ' on /data '` ]] && bomb /data/ is not mounted
+
+[[ ! -d $data/guests/ ]] && bomb $data/guests/ not found
+[[ ! -d $data/kernels/ ]] && bomb $data/kernels/ not found
+# todo - only required when dealing with partclone-based images
+[[ ! -d $data/templates/ ]] && bomb $data/kernels/ not found
+
+# -z exists 1 and terminates the parent script set -e
+# this is why there's -n here instead
+[[ -n $pubkeys ]] || bomb missing \$pubkeys
+

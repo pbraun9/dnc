@@ -1,0 +1,66 @@
+#!/bin/bash
+set -e
+
+# memory allocated to guests at boot-time
+memory=1024
+
+function bomb {
+	echo Error: $@
+	exit 1
+}
+
+export CLUSTER=/root/cluster.conf
+
+[[ -z $1 ]] && echo "${0##*/} <INSTANCE-NAME>" && exit 1
+res=$1
+
+echo powering on instance $res
+
+source /etc/dnc.conf
+
+[[ -z $hostprefix ]] && echo define hostprefix in dnc.conf && exit 1
+[[ -z $data ]]       && echo define data in dnc.conf && exit 1
+
+echo -n checking if guest already lives somewhere ...
+alive=`dsh -e -g xen "xl list | grep -E \"^$res[[:space:]]+\"" | cut -f1 -d:`
+[[ -n $alive ]] && echo $res already lives on $alive && exit 1 || echo done
+
+# available memory left hence we look for the greatest amount
+# sort nodes with most available ram at first
+ram_nodes=`dsh -e -g xen "xl info | grep ^free_memory" | sort -V -r -k3 -t:`
+
+# prevent ssh from eating loops' output with -n
+while read -r line; do
+	free=`echo $line | awk '{print $NF}'`
+	ram_node=`echo $line | cut -f1 -d:`
+
+	[[ -z $free ]] && bomb failed to define \$free for node $ram_node
+	[[ -z $ram_node ]] && bomb failed to define \$ram_node for node $ram_node
+
+	#echo "node with least used RAM is $node ($free M free)"
+	echo evaluating node $ram_node \($memory / $free MiB\)
+
+	(( free < memory )) && \
+	  bomb not enough memory available on node $ram_node \($memory / $free MiB\)
+
+	tmp=`ssh -n $ram_node "ls -d $data/guests/ $data/kernels/ >/dev/null 2>&1 \
+		&& echo OK || echo NOK"`
+	tmp2=`ssh -n $ram_node "ls $data/guests/$res/$res >/dev/null 2>&1 \
+		&& echo OK || echo NOK"`
+
+	[[ $tmp = NOK ]]  && echo warning: $ram_node is under maintenance && continue
+	[[ $tmp2 = NOK ]] && echo warning: no $data/guests/$res/$res on $ram_node && continue
+	[[ $tmp = OK && $tmp2 = OK ]] && break || true
+
+	# useless here
+	#unset tmp tmp2
+done <<< "$ram_nodes"
+
+[[ -z $ram_node ]] && bomb missing \$ram_node
+
+echo starting instance $res on node $ram_node
+# self-verbose: Parsing config from /data/guests/dnc1033/dnc1033
+ssh $ram_node xl create $data/guests/$res/$res
+
+echo instance $res has been started on node $ram_node
+
