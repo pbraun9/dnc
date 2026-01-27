@@ -1,0 +1,23 @@
+#!/bin/bash
+
+# warning this won't show peers' local configs
+# this shows only shared and current node's local ones
+
+cd /etc/drbd.d/
+
+for f in *.res; do
+	res=${f%\.res}
+	echo -n "$res "
+
+	device=`grep -E 'minor|device' $f | cut -f2- -d:`
+
+	config=`ls -d \
+		/data/guests/$res/ \
+		/data/templates/$res/ \
+		/data_local/guests/$res/ \
+		/data_local/templates/$res/ \
+		2>/dev/null`
+
+	echo $device $config
+done
+

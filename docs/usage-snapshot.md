@@ -1,9 +1,13 @@
-# dnc usage for differential vdisks
+# dnc usage for snapshot-based guests
 
-## create a new drbd/lvm guest template
+_differential read-write snapshots that-is_
+
+<!--
+## create a guest template
 
 same as for a casual vdisk,
 see [README.usage.md](README.usage.md)
+-->
 
 ## create a new guest (based on template)
 
@@ -15,7 +19,7 @@ what templates do we have?
 
 	dnc-list-templates
 
-create a new snapshot-based drbd volume based on lvm template (here debian12)
+create a new snapshot-based drbd resource based on underlying storage snapshots (here debian12)
 <!--
 note you might avoid the range used by nobudget (starts at 1024).
 -->
@@ -25,5 +29,5 @@ note you might avoid the range used by nobudget (starts at 1024).
 
 ## ready to go
 
-back to [README.usage.md](README.usage.md)
+back to [usage.md](usage.md)
 

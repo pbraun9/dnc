@@ -105,8 +105,10 @@ EOF
 chmod +x lala/etc/rc.d/rc.inet2
 
 source /root/dnc/dnclib-newguest-sshd
-
 # NO NEED TO GENERATE NEW PAIRS ON SLACKWARE - ALL HOST KEYS GET GENERATED ANYHOW
+
+mv -nv lala/etc/slackpkgs/mirrors lala/etc/slackpkgs/mirrors.dist
+echo $slackware_mirror > lala/etc/slackpkgs/mirrors
 
 source /root/dnc/dnclib-newguest-ready
 
