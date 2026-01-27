@@ -1,93 +1,14 @@
 #!/bin/bash
 set -e
 
-# todo - trap un-mount $data/guests/$res/lala in case of failure
+distro=debian
 
-#
-# no need for $tpl here since we already defined that while cloning the origin snapshot
-#
-
-[[ -z $1 ]] && echo usage: "${0##*/} <drbd slot> [guest hostname]" && exit 1
-slot=$1
-
-# use standardized name if not provided
-# note that only matters for within the systems itself
-# we otherwise strictly use drbd resource name from our infrastructure layer
-[[ -n $2 ]] && guest=$2 || guest=dnc$slot
-
-# fix guest hostname just in case fqdn was provided
-short=${guest%%\.*}
-
+source /root/dnc/dnclib-newguest-args
 source /etc/dnc.conf
 source /root/dnc/dnclib
-
-# check drbd/lvm resource status
-# defines $res
 source /root/dnc/dnclib-checks
-
-# provided as args
-[[ -z $slot ]]  && bomb missing \$slot
-[[ -z $guest ]] && bomb missing \$guest
-
-# shorthands
-[[ -z $short ]] && bomb missing \$short
-
-# provided by dnclib-checks
-[[ -z $res ]]   && bomb missing \$res
-
-alive=`dsh -e -g xen "xl list | grep -E \"^$res[[:space:]]+\"" | cut -f1 -d:`
-[[ -n $alive ]] && echo $res already lives on $alive && exit 1
-
-# gw and friends got sourced by dnc.conf
-# but guest ip gets eveluated by dec2ip function
-dec2ip $slot
-
-[[ -z $ip ]] && bomb missing \$ip
-[[ -z $gw ]] && bomb missing \$gw
-
-echo
-echo DEBIAN SYSTEM POST-INSTALLATION
-echo
-
-# note drbd resource is possibly diskless
-
-mkdir -p $data/guests/$res/lala/
-
-# we have two kinds of debian templates BTRFS and REISER4
-#btrfs check --readonly /dev/drbd/by-res/$res/0 >/dev/null 2>&1 && fs=btrfs || fs=reiser4
-#dd if=/dev/drbd/by-res/$res/0 bs=1M count=1 2>/dev/null | hexdump -C | grep BHRfS >/dev/null 2>&1 && fs=btrfs || fs=reiser4
-
-function mount__ext4 {
-	echo -n mount ext4 ...
-	mount -t ext4 /dev/drbd$slot $data/guests/$res/lala/ && \
-		echo done || bomb failed to mount ext4 for $res drbd resource
-}
-
-function mount__btrfs {
-	echo mounting butterfs ...
-	mount -t btrfs -o compress=lzo /dev/drbd$slot $data/guests/$res/lala/
-	# (already resized)
-	# not sure why that command doesn't return 0 although it succeeds
-}
-
-function mount__reiser4 {
-	echo -n mounting reiser4 ...
-	mount -t reiser4 -o noatime,nodiratime,txmod=wa,discard \
-		/dev/drbd$slot $data/guests/$res/lala/ && \
-		echo done || bomb failed to mount reiser4 for $res
-	# async
-}
-
-#[[ ! -x `which btrfs` ]] && bomb missing btrfs command
-
-echo checking filesystem type
-if tune2fs -l /dev/drbd$slot >/dev/null >/dev/null 2>&1; then
-	mount__ext4
-elif btrfs filesystem show /dev/drbd$slot >/dev/null 2>&1; then
-	mount__btrfs
-else
-	mount__reiser4
-fi
+source /root/dnc/dnclib-newguest-checks
+source /root/dnc/dnclib-newguest-postinstall
 
 # todo - use absolute path all script long instead of entering the folder
 cd $data/guests/$res/
@@ -119,37 +40,20 @@ echo $short > lala/etc/hostname && echo done
 #        [[ -n ${!dns} ]] && echo ${!dns} $dns >> lala/etc/hosts
 #done; unset dns
 
-echo -n writing hosts ...
+echo -n static names ...
 cat > lala/etc/hosts <<EOF && echo done
-127.0.0.1       localhost.localdomain localhost
-::1             localhost.localdomain localhost ip6-localhost ip6-loopback
+127.0.0.1       localhost
+::1             localhost ip6-localhost ip6-loopback
 ff02::1         ip6-allnodes
 ff02::2         ip6-allrouters
 
-${ip%/*}	$short
-
+$ip		$short
 EOF
 #$dns0 dns0
 
-# same here, no network setup assumed in the template
-rm -f lala/etc/resolv.conf
+source /root/dnc/dnclib-newguest-resolv
 
-# todo - also add search domain in here
-echo -n static name resolution ...
-# sourcing the vars themselves
-for dns in $dns1 $dns2 $dns3 $dns4; do
-        echo nameserver $dns >> lala/etc/resolv.conf
-done && echo done; unset dns
-
-#cat > lala/etc/resolv.conf <<EOF && echo done
-#nameserver 208.67.222.222
-#nameserver 208.67.220.220
-#nameserver 10.1.255.253
-#nameserver 10.1.255.252
-#nameserver 10.1.255.251
-#EOF
-
-echo -n network/interfaces ...
+echo -n network setup ...
 cat > lala/etc/network/interfaces <<EOF && echo done
 auto lo
 iface lo inet loopback
@@ -158,16 +62,12 @@ auto eth0
 iface eth0 inet static
 	address $ip/16
 	gateway $gw
-
 EOF
 
-# before tackling /etc/ssh/...
-echo -n make sure openssh-server is installed ...
-chroot lala/ which sshd
+source /root/dnc/dnclib-newguest-sshd
 
-# just in case template had host keys within (it shouldn't)
-#echo clean-up ssh host keys - just in case
-rm -f lala/etc/ssh/ssh_host_*
+# todo - let the system generate its key pars at first boot?
+#	 that would be better
 
 # [FAILED] Failed to start OpenBSD Secure Shell server.
 # we have better entropy on bare-metal anyway
@@ -176,14 +76,6 @@ rm -f lala/etc/ssh/ssh_host_*
 echo generating ECC-only ssh host keys
 ssh-keygen -q -t ecdsa -f lala/etc/ssh/ssh_host_ecdsa_key -C root@$short -N ''
 ssh-keygen -q -t ed25519 -f lala/etc/ssh/ssh_host_ed25519_key -C root@$short -N ''
-
-echo -n adding user ssh authorized pubkeys ...
-mkdir -p lala/root/.ssh/
-cat > lala/root/.ssh/authorized_keys <<EOF && echo done
-$pubkeys
-EOF
-chmod 700 lala/root/.ssh/
-chmod 600 lala/root/.ssh/authorized_keys
 
 # ADDITIONAL FIXUP - template out of sync
 #echo -n writing sources.list ...
@@ -194,39 +86,5 @@ chmod 600 lala/root/.ssh/authorized_keys
 #deb http://security.debian.org/debian-security bullseye-security main contrib non-free
 #EOF
 
-echo -n empty the root password ...
-chroot lala/ passwd -d root
-
-#
-# done tuning the guest image
-#
-
-echo -n un-mounting...
-umount $data/guests/$res/lala/ && echo done
-rmdir $data/guests/$res/lala/
-
-echo -n writing guest config...
-cat > $data/guests/$res/$res <<EOF && echo done
-kernel = "$data/kernels/5.2.21.domureiser4.vmlinuz"
-root = "/dev/xvda1 ro console=hvc0 net.ifnames=0 biosdevname=0 mitigations=off"
-#extra = "init=/bin/bash"
-name = "$res"
-vcpus = 1
-memory = 1024
-disk = ['phy:/dev/drbd$slot,xvda1,w']
-vif = [ 'bridge=guestbr0, vifname=dnc$slot.0',
-	'bridge=guestbr0, vifname=dnc$slot.1' ]
-EOF
-
-# we want PV not PVH when doing PoC as nested
-[[ $pvh = yes ]] && echo 'type = "pvh"' >> $data/guests/$res/$res
-
-#memory = 7168
-# netcfg/do_not_use_netplan=true
-echo
-
-#echo starting guest $guest
-#xl create $data/guests/$guest/$guest && echo -e \\nGUEST $guest HAS BEEN STARTED
-#echo up > $data/guests/$guest/state
-/root/dnc/dnc-startguest-lowram $res
+source /root/dnc/dnclib-newguest-ready
 

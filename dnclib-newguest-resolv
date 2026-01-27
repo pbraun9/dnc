@@ -1,0 +1,19 @@
+
+# same here, no network setup assumed in the template
+rm -f lala/etc/resolv.conf
+
+# todo - also add search domain in here
+echo -n static name resolution ...
+# sourcing the vars themselves
+for dns in $dns1 $dns2 $dns3 $dns4; do
+        echo nameserver $dns >> lala/etc/resolv.conf
+done && echo done; unset dns
+
+#cat > lala/etc/resolv.conf <<EOF && echo done
+#nameserver 208.67.222.222
+#nameserver 208.67.220.220
+#nameserver 10.1.255.253
+#nameserver 10.1.255.252
+#nameserver 10.1.255.251
+#EOF
+

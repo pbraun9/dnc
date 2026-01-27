@@ -68,43 +68,39 @@ echo -n writing /etc/drbd.d/$guest.res ...
 if [[ -f /etc/drbd.d/$guest.res ]]; then
 	echo already
 else
-# ---
-
-cat > /etc/drbd.d/$guest.res <<EOF
+	cat > /etc/drbd.d/$guest.res <<EOF
 resource $guest {
 	device /dev/drbd$minor;
 	meta-disk internal;
 EOF
 
-for node in $nodes; do
-	id=`echo $node | sed -r "s/^$hostprefix//"`
-	if [[ $node = $node1 || $node = $node2 ]]; then
-		cat >> /etc/drbd.d/$guest.res <<EOF
+	for node in $nodes; do
+		id=`echo $node | sed -r "s/^$hostprefix//"`
+		if [[ $node = $node1 || $node = $node2 ]]; then
+			cat >> /etc/drbd.d/$guest.res <<EOF
 	on $node {
 		node-id   $id;
 		address   $cluster_prefix.$id:$port;
 		disk      $disk;
 	}
 EOF
-	else
-		cat >> /etc/drbd.d/$guest.res <<EOF
+		else
+			cat >> /etc/drbd.d/$guest.res <<EOF
 	on $node {
 		node-id   $id;
 		address   $cluster_prefix.$id:$port;
 		disk      none;
 	}
 EOF
-	fi
-done; unset node
+		fi
+	done; unset node
 
-cat >> /etc/drbd.d/$guest.res <<EOF && echo done
+	cat >> /etc/drbd.d/$guest.res <<EOF && echo done
 	connection-mesh {
 		hosts $nodes;
 	}
 }
 EOF
-
-#---
 fi
 
 for node in $nodes; do

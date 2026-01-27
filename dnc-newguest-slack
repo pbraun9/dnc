@@ -1,0 +1,112 @@
+#!/bin/bash
+set -e
+
+distro=slackware
+
+source /root/dnc/dnclib-newguest-args
+source /etc/dnc.conf
+source /root/dnc/dnclib
+source /root/dnc/dnclib-checks
+source /root/dnc/dnclib-newguest-checks
+source /root/dnc/dnclib-newguest-postinstall
+
+# todo - use absolute path all script long instead of entering the folder
+cd $data/guests/$res/
+
+# assuming no fstab (like you simply did slackstrap and that's it!)
+# todo - deal with butterfs and reiser4
+echo -n static filesystems information ...
+cat > lala/etc/fstab <<EOF && echo done
+/dev/xvda1 / ext4 defaults 1 1
+devpts /dev/pts devpts gid=5,mode=620 0 0
+proc /proc proc defaults 0 0
+tmpfs /dev/shm tmpfs defaults 0 0
+EOF
+#/dev/xvda1 / reiser4 defaults 1 1
+
+echo -n disable non-root login ...
+echo non-root login is disabled > lala/etc/nologin && echo done
+
+echo -n check for c_rehash ...
+chroot lala/ which c_rehash
+
+echo -n refresh ssl trust anchors ...
+# self-verbose
+chroot lala/ bash -ic "update-ca-certificates"
+
+echo -n hostname $short ...
+echo $guest > lala/etc/HOSTNAME && echo done
+
+echo -n enable svr4 serial line ...
+mv -nv lala/etc/inittab lala/etc/inittab.dist
+# remove useless and confusing trailing line comment
+# warning escape in da place
+sed \$d lala/etc/inittab.dist > lala/etc/inittab
+cat >> lala/etc/inittab <<EOF && echo done
+s1:12345:respawn:/sbin/agetty --noclear --local-line hvc0 115200 linux
+EOF
+
+echo -n allow hvc0 tty ...
+[[ -z `grep hvc0 lala/etc/securetty` ]] && echo hvc0 >> lala/etc/securetty && \
+	echo done || echo already
+
+# add guest domain when there is
+# slackware is like old redhats, we're assuming sendmail to be picky about fqdn self resolution
+# (although sendmail is not installed)
+[[ $guest = $short ]] && entry="$short" || entry="$guest $short"
+
+echo -n static names ...
+cat > lala/etc/hosts <<EOF && echo done
+127.0.0.1       localhost.localdomain localhost
+::1		localhost.localdomain localhost
+
+$ip		$entry
+EOF
+unset entry
+#${ip%\.*}.254  gw
+#${ip%\.*}.253  dns1
+#${ip%\.*}.252  dns2
+#${ip%\.*}.251  dns3
+
+source /root/dnc/dnclib-newguest-resolv
+
+echo -n network setup ...
+# WARNING ESCAPES ARE IN THERE
+cat > lala/etc/rc.d/rc.inet1 <<EOF && echo done
+#!/bin/bash
+
+echo rc.inet1 PATH is \$PATH
+
+if [[ \$1 = stop || \$1 = down ]]; then
+	route delete default
+	ifconfig eth0 down
+	ifconfig lo down
+	exit
+fi
+
+echo -n lo ...
+ifconfig lo up && echo done
+
+echo -n eth0 ...
+ifconfig eth0 $ip/16 up && echo done
+
+echo -n default route ...
+route add default gw $gw && echo done
+EOF
+chmod +x lala/etc/rc.d/rc.inet1
+
+echo -n sshd at boot-time ...
+cat > lala/etc/rc.d/rc.inet2 <<EOF && echo done
+#!/bin/bash
+
+# self-verbose
+/etc/rc.d/rc.sshd start
+EOF
+chmod +x lala/etc/rc.d/rc.inet2
+
+source /root/dnc/dnclib-newguest-sshd
+
+# NO NEED TO GENERATE NEW PAIRS ON SLACKWARE - ALL HOST KEYS GET GENERATED ANYHOW
+
+source /root/dnc/dnclib-newguest-ready
+

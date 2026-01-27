@@ -1,0 +1,17 @@
+
+# in case template had host keys within (it shouldn't)
+echo clean-up ssh host keys
+rm -f lala/etc/ssh/ssh_host_*
+
+#
+# authorized keys
+#
+
+echo -n adding root authorized keys ...
+mkdir -p lala/root/.ssh/
+cat > lala/root/.ssh/authorized_keys <<EOF && echo done
+$pubkeys
+EOF
+chmod 700 lala/root/.ssh/
+chmod 600 lala/root/.ssh/authorized_keys
+

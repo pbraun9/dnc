@@ -1,0 +1,20 @@
+
+#
+# check drbd resource status
+# defines $res
+#
+
+# no need for $tpl here since
+# --either-- already did partclone on it
+# --or-- already defined that while cloning the origin snapshot
+[[ -z $1 ]] && echo "usage: ${0##*/} <drbd slot> [guest hostname]" && exit 1
+slot=$1
+
+# use standardized name if not provided
+# note that only matters within the systems itself
+# we otherwise strictly use drbd resource name from our infrastructure layer
+[[ -n $2 ]] && guest=$2 || guest=dnc$slot
+
+# fix guest hostname just in case fqdn was provided
+short=${guest%%\.*}
+

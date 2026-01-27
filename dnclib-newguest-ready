@@ -1,0 +1,58 @@
+
+echo -n empty the root password ...
+# self-verbose
+chroot lala/ passwd -d root
+
+echo -n deploying kernel version $kernelver modules ...
+mkdir -p lala/lib/modules/
+rm -rf lala/lib/modules/$kernelver/
+tar xzf $data/kernels/$kernelver.domU.modules.tar.gz -C lala/lib/modules/ && echo done
+
+#
+# done tuning the guest image
+#
+
+echo -n un-mounting ...
+umount $data/guests/$res/lala/ && echo done
+rmdir $data/guests/$res/lala/
+
+echo -n writing xen guest config ...
+cat > $data/guests/$res/$res <<EOF
+kernel = "$data/kernels/$kernelver.domU.vmlinuz"
+EOF
+
+if [[ $distro = debian ]]; then
+        cat >> $data/guests/$res/$res <<EOF
+root = "/dev/xvda1 ro console=hvc0 net.ifnames=0 biosdevname=0 mitigations=off"
+EOF
+elif [[ $distro = slackware ]]; then
+        cat >> $data/guests/$res/$res <<EOF
+root = "/dev/xvda1 ro console=hvc0 mitigations=off"
+EOF
+else
+        echo unknown distro $distro
+        exit 1
+fi
+
+        cat >> $data/guests/$res/$res <<EOF
+#extra = "init=/bin/bash"
+name = "$res"
+vcpus = 1
+memory = 1024
+disk = ['phy:/dev/drbd$slot,xvda1,w']
+vif = [ 'bridge=guestbr0, vifname=dnc$slot.0',
+        'bridge=guestbr0, vifname=dnc$slot.1' ]
+EOF
+
+# we want PV not PVH when doing PoC as nested
+[[ $pvh = yes ]] && echo 'type = "pvh"' >> $data/guests/$res/$res
+
+#memory = 7168
+# netcfg/do_not_use_netplan=true
+echo
+
+#echo starting guest $guest
+#xl create $data/guests/$guest/$guest && echo -e \\nGUEST $guest HAS BEEN STARTED
+#echo up > $data/guests/$guest/state
+/root/dnc/dnc-startguest-lowram $res
+

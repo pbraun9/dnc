@@ -1,0 +1,58 @@
+
+if [[ $distro = debian ]]; then
+	echo DEBIAN GNU/LINUX POST-INSTALLATION
+elif [[ $distro = slackware ]]; then
+	echo SLACKWARE LINUX POST-INSTALLATION
+else
+        echo unknown distro $distro
+        exit 1
+fi
+
+# mount casual vdisk (partcloned) or snapshot vdisk
+# note drbd resource is possibly diskless
+
+mkdir -p $data/guests/$res/lala/
+
+function mount__ext4 {
+        echo -n mount ext4 ...
+        mount -t ext4 /dev/drbd$slot $data/guests/$res/lala/ && \
+                echo done || bomb failed to mount ext4 for $res drbd resource
+}
+
+#btrfs check --readonly /dev/drbd/by-res/$res/0 >/dev/null 2>&1 && fs=btrfs || fs=reiser4
+#dd if=/dev/drbd/by-res/$res/0 bs=1M count=1 2>/dev/null | hexdump -C | grep BHRfS >/dev/null 
+2>&1 && fs=btrfs || fs=reiser4
+function mount__btrfs {
+        echo mounting butterfs ...
+        mount -t btrfs -o compress=lzo /dev/drbd$slot $data/guests/$res/lala/
+        # (already resized)
+        # not sure why that command doesn't return 0 although it succeeds
+}
+
+# todo - w/ or w/o defaults?
+function mount__reiser4 {
+        echo -n mounting reiser4 ...
+        mount -t reiser4 -o defaults,noatime,nodiratime,txmod=wa,discard \
+                /dev/drbd$slot $data/guests/$res/lala/ && \
+                echo done || bomb failed to mount reiser4 for drbd slot $res
+        # async
+}
+
+#[[ ! -x `which btrfs` ]] && bomb missing btrfs command
+
+if [[ -n `mount | grep -E "^/dev/drbd$slot[[:space:]]+"` ]]; then
+	echo filesystem on /dev/drbd$slot is already mounted
+else
+	echo -n checking filesystem type ...
+	tune2fs -l /dev/drbd$slot >/dev/null >/dev/null 2>&1 && fstype=ext4 || true
+	btrfs filesystem show /dev/drbd$slot >/dev/null 2>&1 && fstype=butterfs || true
+	# todo deal with reiser4
+
+	[[ -z $fstype ]] && echo could not define fstype && exit 1 || true
+	echo $fstype
+
+	[[ $fstype = ext4 ]] && mount__ext4 || true
+	[[ $fstype = butterfs ]] && mount__btrfs || true
+	#mount__reiser4
+fi
+

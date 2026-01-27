@@ -9,13 +9,17 @@ check for available drbd slot
 
         dnc-list-slots
 
+	slot=5
+	guest=slack150tpl
+
 	slot=13
 	guest=debian13tpl
 
 	slot=21
 	guest=nobudget1
 
-	slot=22
+	# avoid slot 22 as 22/tcp gets rejected to avoid confusion
+	slot=23
 	guest=nobudget2
 
 create a new guest vdisk (or template which live on true vdisk just as full-blown guests)
@@ -38,17 +42,19 @@ _shared_
         #ls -lF /dev/drbd/by-res/$guest/0
         ls -lF /dev/drbd$slot
 
-you can now proceed with a
-[system bootstrap and template preparation](README.template.md)
-against that new DRBD volume
+you can now proceed with a system bootstrap and template preparation,
+either [as casual vdisk](README.template-vdisk.md)
+or [as snapshot](README.template-snapshot.md)
+against that new DRBD resource
 
-let's assume from now on that `/dev/drbd7` contains a bootstrapped debian12 system.
+let's assume from now on that `/dev/drbd$slot` contains a bootstrapped debian12 system.
 note that the underlying volume, namely `/dev/mapper/thin-debian12` or `/dev/zvol/debian12`, contain not only the system but also the drbd headers.
 
 then comes a choice.  --either-- you proceed with full-blown and independent vdisks,
 which will leverage partclone-based templates
 
 	dnc-partclone-deploy debian13tpl $slot
+	dnc-partclone-deploy slack150tpl $slot
 
 --or-- you proceed with snapshot-based templates (experimental)
 
@@ -59,11 +65,12 @@ _that's for intances not template images_
 finally post-tune the guest with the appropriate network settings
 
         dnc-newguest-debian $slot <OPTIONAL HOSTNAME>
+        dnc-newguest-slack $slot <OPTIONAL HOSTNAME>
 
 you can now reach the newly created guest on its dedicated tcp port (assuming DNAT on the load
 -balancer)
 
-        ssh your.domain.tld -l root -p 7
+        ssh your.domain.tld -l root -p $slot
 
 <!--
 ## Distributed HA
