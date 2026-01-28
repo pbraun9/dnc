@@ -2,6 +2,7 @@
 
 ## create a new guest vdisk
 
+<!--
 check for available drbd slot
 <!-- from the drbd/lvm template range (<1024) -->
 
@@ -13,14 +14,20 @@ check for available drbd slot
 	# avoid slot 22 as 22/tcp gets rejected to avoid confusion
 	slot=23
 	guest=nobudget2
+-->
 
+<!--
 create a new guest vdisk (or template which live on true vdisk just as full-blown guests)
 e.g. with drbd slot `$slot` on mirror nodes 1 and 2
+-->
 
-        dnc-new-resource-vdisk slack1 slack2 $slot $guest
+        dnc-list-slots
+	slot=1024
+        dnc-new-resource-vdisk slack1 slack2 $slot that-resource
 
 note node3 and others, if they exist will reach the resource diskless
 
+<!--
 _for lvm2_
 
         ls -lF /dev/mapper/thin-$guest
@@ -33,6 +40,7 @@ _shared_
 
         #ls -lF /dev/drbd/by-res/$guest/0
         ls -lF /dev/drbd$slot
+-->
 
 ## depoy partclone template on it
 

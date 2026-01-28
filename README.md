@@ -4,15 +4,15 @@ _wrapper scripts for XEN/DRBD resource management_
 
 ## install
 
-see [install.md](install.md,)
+see [install.md](docs/install.md)
 
 ## setup
 
-see [bootstrap-farm.md](bootstrap-farm.md)
+see [bootstrap-farm.md](docs/bootstrap-farm.md)
 
 ## usage
 
-see [template.md](template.md) and [usage.md](usage.md)
+see [template.md](docs/template.md) and [usage.md](docs/usage.md)
 
 ## additional notes
 

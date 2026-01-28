@@ -31,15 +31,45 @@ see [usage-partclone.md](usage-partclone.md)
 
 that goes in `/data_local/guests/` for now.
 
+prepare an additional vdisk resource for shared storage
+
+	mkdir /data/
+	touch /data/NOT_MOUNTED
+	vi /etc/fstab
+
+	/dev/xvdb /data ext4 defaults 1 2
+
+	mount /data
+
+setup an NFS server on that guest system
+
+	vi /etc/exports
+
+	/data 10.3.3.0/24(rw,sync,no_root_squash,no_subtree_check)
+
 ## nobudget2
 
-_for NFS HA_
+_for NFS HA+LBS_
 
 TBD
 
-## setup NFS
+## VMM nodes
 
+set NFS client on all VMM nodes
+
+	slackpkg install network-scripts nfs-utils rpcbind
+	chmod +x /etc/rc.d/rc.rpc
+	/etc/rc.d/rc.rpc start
+
+	vi /etc/fstab
+
+	10.3.3.21:/data /data nfs rw,noatime,nodiratime,_netdev 0 0
+
+	mount /data
+
+<!--
 setup an NFS share for `/data/` from nobudget1 guest and mount at boot-time on all the VMM nodes.
+-->
 
 <!--
 you're now ready to apply the [vmm-dnc-nfs](...) role to nobudget1
@@ -59,11 +89,10 @@ first the existing local resources
 
 e.g.
 
-	mv /data_local/templates/debian13tpl/ /data/templates/
-	mv /data_local/templates/slack150tpl/ /data/templates/
-
-	mv /data_local/guests/nobudget1/ /data/guests/
-	mv /data_local/guests/nobudget2/ /data/guests/
+	mv -i /data_local/templates/* /data/templates/
+	mv -i /data_local/guests/* /data/guests/
+	rmdir /data_loca/templates/
+	rmdir /data_loca/guests/
 
 then a replica of the kernels you are using for your guests (it's good to keep a local copy also, for the node to be independent just in case)
 
