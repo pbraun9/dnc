@@ -6,7 +6,7 @@ _be it for partclone-based or snapshot-based guests_
 
 check for available drbd slot
 
-        dnc-list-slots
+	dnc-list-slots
 
 	slot=5
 	tpl=slack150tpl

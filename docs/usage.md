@@ -2,16 +2,7 @@
 
 once you have a few [templates](template.md) in place, you can proceed.
 
-<!--
-	dnc-list-slots
-	dnc-new-resource-vdisk slack1 slack2 1024 that-resource
-	
-you now have the `/dev/drbd1024` resource available that contains a bootstrapped debian 13 system.
-note that the underlying volume, namely `/dev/mapper/thin-$tpl` or `/dev/zvol/smith/$tpl`, contain not only the sys
-tem but also the drbd headers.
--->
-
-then comes a choice.  --either-- you proceed with full-blown and independent vdisks,
+here comes a choice.  --either-- you proceed with full-blown and independent vdisks,
 which will leverage partclone-based templates
 --or-- you proceed with snapshot-based templates (experimental)
 

@@ -2,12 +2,7 @@
 
 _differential read-write snapshots that-is_
 
-<!--
-## create a guest template
-
-same as for a casual vdisk,
-see [README.usage.md](README.usage.md)
--->
+_DRAFT & EXPERIMENTAL (only somehow works with lvm2 not zfs snapshots just clone yet_
 
 ## create a new guest (based on template)
 
@@ -19,13 +14,10 @@ what templates do we have?
 
 	dnc-list-templates
 
-create a new snapshot-based drbd resource based on underlying storage snapshots (here debian12)
-<!--
-note you might avoid the range used by nobudget (starts at 1024).
--->
--- for example let's say we want slot 41
+create a new snapshot-based drbd resource based on underlying storage snapshots (here debian13tpl)
+-- for example let's say we want drbd slot 1025
 
-        dnc-new-resource-snapshot debian12 41 <OPTIONAL RESOURCE NAME>
+        dnc-new-resource-snapshot debian13tpl 1025 this-resource
 
 ## ready to go
 
